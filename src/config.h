@@ -4,7 +4,7 @@
 
 // Versão do firmware
 constexpr uint8_t FW_VERSION_MAJOR = 0;
-constexpr uint8_t FW_VERSION_MINOR = 1;
+constexpr uint8_t FW_VERSION_MINOR = 3;
 constexpr uint8_t FW_VERSION_PATCH = 0;
 
 // Endereço I2C do módulo (faixa válida: 0x20-0x27)
