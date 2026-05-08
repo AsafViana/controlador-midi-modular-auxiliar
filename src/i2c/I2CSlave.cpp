@@ -3,6 +3,7 @@
 #include "../hardware/Calibration.h"
 #include "../hardware/ControlReader.h"
 #include "../hardware/HardwareMap.h"
+#include "../hardware/PersistentConfig.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <cstring>
@@ -50,6 +51,18 @@ static void onReceive(int numBytes) {
       } else {
         Calibration::startCalibration(channel);
       }
+    }
+  } else if (cmd == CMD_SET_CONFIG) {
+    lastCommand = cmd;
+    // Payload: [channel(1), deadzone(1), debounce_hi(1), debounce_lo(1),
+    // invertido(1)]
+    uint8_t payload[5];
+    uint8_t idx = 0;
+    while (Wire.available() && idx < 5) {
+      payload[idx++] = Wire.read();
+    }
+    if (idx == 5) {
+      PersistentConfig::applyFromI2C(payload, idx);
     }
   }
   // Discard any remaining bytes

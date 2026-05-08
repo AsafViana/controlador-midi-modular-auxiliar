@@ -48,6 +48,7 @@ constexpr uint8_t CMD_DESCRIPTOR = 0x01;
 constexpr uint8_t CMD_READ_VALUES = 0x02;
 constexpr uint8_t CMD_INFO = 0x03;
 constexpr uint8_t CMD_CALIBRATE = 0x04;
+constexpr uint8_t CMD_SET_CONFIG = 0x05;
 
 // Constantes MIDI
 constexpr uint8_t MIDI_MAX = 127;

@@ -2,6 +2,7 @@
 #include "../config.h"
 #include "Calibration.h"
 #include "HardwareMap.h"
+#include "PersistentConfig.h"
 #include <Arduino.h>
 
 namespace ControlReader {
@@ -139,7 +140,8 @@ void update() {
   for (uint8_t i = 0; i < HardwareMap::NUM_CONTROLES; i++) {
     TipoControle tipo = HardwareMap::getTipo(i);
     uint8_t gpio = HardwareMap::getGpio(i);
-    bool invertido = HardwareMap::isInvertido(i);
+    auto cfg = PersistentConfig::getConfig(i);
+    bool invertido = cfg.invertido;
 
     switch (tipo) {
     case TipoControle::POTENCIOMETRO:
@@ -181,7 +183,7 @@ void update() {
       if (analogStates[i].disconnected)
         break;
 
-      if (applyDeadzone(midiValue, analogStates[i].lastValue, DEADZONE)) {
+      if (applyDeadzone(midiValue, analogStates[i].lastValue, cfg.deadzone)) {
         analogStates[i].lastValue = midiValue;
         valueBuffer[i] = invertido ? invertValue(midiValue) : midiValue;
       }
@@ -199,7 +201,7 @@ void update() {
 
       bool newStable =
           applyDebounce(reading, buttonStates[i].stableState,
-                        buttonStates[i].lastChangeMs, nowMs, DEBOUNCE_MS);
+                        buttonStates[i].lastChangeMs, nowMs, cfg.debounce);
 
       if (newStable != buttonStates[i].stableState) {
         buttonStates[i].stableState = newStable;
