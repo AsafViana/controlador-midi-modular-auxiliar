@@ -3,7 +3,6 @@
 #include "../config.h"
 #include <cstdint>
 
-
 enum class TipoControle : uint8_t {
   BOTAO = 0,
   POTENCIOMETRO = 1,
@@ -45,3 +44,41 @@ constexpr uint8_t getGpioB(uint8_t idx) { return CONTROLES[idx].gpioB; }
 
 static_assert(HardwareMap::NUM_CONTROLES <= MAX_CONTROLES,
               "Exceeded maximum number of controls");
+
+// --- Validação de GPIOs em tempo de compilação ---
+
+// GPIOs ADC válidos no ESP32-C3: 0, 1, 2, 3, 4, 5
+constexpr bool isValidAdcGpio(uint8_t gpio) { return gpio <= 5; }
+
+// GPIOs digitais válidos no ESP32-C3: 0-10, 18-21
+constexpr bool isValidDigitalGpio(uint8_t gpio) {
+  return (gpio <= 10) || (gpio >= 18 && gpio <= 21);
+}
+
+// Valida um controle individual
+constexpr bool validateControl(uint8_t idx) {
+  if (HardwareMap::CONTROLES[idx].tipo == TipoControle::POTENCIOMETRO ||
+      HardwareMap::CONTROLES[idx].tipo == TipoControle::SENSOR) {
+    return isValidAdcGpio(HardwareMap::CONTROLES[idx].gpio);
+  }
+  if (HardwareMap::CONTROLES[idx].tipo == TipoControle::BOTAO) {
+    return isValidDigitalGpio(HardwareMap::CONTROLES[idx].gpio);
+  }
+  if (HardwareMap::CONTROLES[idx].tipo == TipoControle::ENCODER) {
+    return isValidDigitalGpio(HardwareMap::CONTROLES[idx].gpio) &&
+           isValidDigitalGpio(HardwareMap::CONTROLES[idx].gpioB);
+  }
+  return false;
+}
+
+// Valida todos os controles recursivamente em constexpr
+constexpr bool validateAllControls(uint8_t idx = 0) {
+  if (idx >= HardwareMap::NUM_CONTROLES)
+    return true;
+  return validateControl(idx) && validateAllControls(idx + 1);
+}
+
+static_assert(validateAllControls(),
+              "Invalid GPIO configuration detected! "
+              "ADC controls (POT/SENSOR) must use GPIO 0-5. "
+              "Digital controls (BUTTON/ENCODER) must use GPIO 0-10 or 18-21.");

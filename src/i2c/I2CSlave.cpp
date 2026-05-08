@@ -70,11 +70,43 @@ static void onRequest() {
   }
 }
 
+// Tenta recuperar o barramento I2C se SDA estiver preso em LOW
+static void recoverI2CBus() {
+  Wire.end();
+  pinMode(PIN_SDA, INPUT);
+  pinMode(PIN_SCL, OUTPUT);
+
+  // Toggle SCL até 9 vezes para liberar SDA
+  for (uint8_t i = 0; i < 9; i++) {
+    digitalWrite(PIN_SCL, LOW);
+    delayMicroseconds(5);
+    digitalWrite(PIN_SCL, HIGH);
+    delayMicroseconds(5);
+    if (digitalRead(PIN_SDA) == HIGH) {
+      break; // SDA liberado
+    }
+  }
+
+  // Reinicializa o barramento
+  Wire.setBufferSize(256);
+  Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
+  Wire.setTimeOut(I2C_TIMEOUT_MS);
+  Wire.onReceive(onReceive);
+  Wire.onRequest(onRequest);
+}
+
 void init() {
   Wire.setBufferSize(256);
   Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
+  Wire.setTimeOut(I2C_TIMEOUT_MS);
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
+
+  // Verifica se o barramento está travado na inicialização
+  pinMode(PIN_SDA, INPUT);
+  if (digitalRead(PIN_SDA) == LOW) {
+    recoverI2CBus();
+  }
 }
 
 } // namespace I2CSlave
