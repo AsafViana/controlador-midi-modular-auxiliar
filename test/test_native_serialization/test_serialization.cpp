@@ -44,7 +44,7 @@ int main() {
           values.push_back(value);
 
           // Build ControleHW struct
-          controls.push_back({labels.back().c_str(), 0, tipo, 0, false, 0});
+          controls.push_back({labels.back().c_str(), 0, tipo, 0, false, 0, 0});
         }
 
         // Serialize

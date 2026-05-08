@@ -74,8 +74,8 @@ void test_encoder_invalid_transition_no_change() {
 void test_cmd_descriptor_starts_with_num_controles() {
   // Create test controls
   ControleHW testControls[] = {
-      {"TestPot", 0, TipoControle::POTENCIOMETRO, 1, false, 0},
-      {"TestBtn", 1, TipoControle::BOTAO, 2, false, 0},
+      {"TestPot", 0, TipoControle::POTENCIOMETRO, 1, false, 0, 0},
+      {"TestBtn", 1, TipoControle::BOTAO, 2, false, 0, 0},
   };
   uint8_t values[] = {100, 50};
   uint8_t buffer[1 + 14 * 2] = {0};
@@ -102,7 +102,7 @@ void test_unknown_command_does_not_alter_state() {
   // scenario doesn't corrupt the buffer. We test that the serialized data
   // remains intact after a hypothetical unknown command (no-op).
   ControleHW testControls[] = {
-      {"Knob1", 0, TipoControle::POTENCIOMETRO, 1, false, 0},
+      {"Knob1", 0, TipoControle::POTENCIOMETRO, 1, false, 0, 0},
   };
   uint8_t values[] = {42};
   uint8_t buffer[1 + 14] = {0};

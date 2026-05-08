@@ -122,6 +122,10 @@ void init() {
     case TipoControle::ENCODER:
       pinMode(gpio, INPUT_PULLUP);
       pinMode(HardwareMap::getGpioB(i), INPUT_PULLUP);
+      // Configura push-button do encoder se definido
+      if (HardwareMap::getGpioSwitch(i) > 0) {
+        pinMode(HardwareMap::getGpioSwitch(i), INPUT_PULLUP);
+      }
       // Initialize encoder value at MIDI_MID
       valueBuffer[i] = MIDI_MID;
       break;
@@ -217,6 +221,37 @@ void update() {
       encoderStates[i].lastAB = currentAB;
       encoderStates[i].value = newValue;
       valueBuffer[i] = invertido ? invertValue(newValue) : newValue;
+
+      // Push-button integrado do encoder (ocupa slot extra no buffer)
+      uint8_t gpioSw = HardwareMap::getGpioSwitch(i);
+      if (gpioSw > 0) {
+        // Calcula o índice do slot do push-button: NUM_CONTROLES + offset
+        uint8_t swIdx = HardwareMap::NUM_CONTROLES;
+        for (uint8_t j = 0; j < i; j++) {
+          if (HardwareMap::getTipo(j) == TipoControle::ENCODER &&
+              HardwareMap::getGpioSwitch(j) > 0) {
+            swIdx++;
+          }
+        }
+        if (swIdx < MAX_CONTROLES) {
+          bool reading = (digitalRead(gpioSw) == LOW);
+
+          if (reading != buttonStates[swIdx].lastReading) {
+            buttonStates[swIdx].lastChangeMs = nowMs;
+            buttonStates[swIdx].lastReading = reading;
+          }
+
+          bool newStable = applyDebounce(
+              reading, buttonStates[swIdx].stableState,
+              buttonStates[swIdx].lastChangeMs, nowMs, DEBOUNCE_MS);
+
+          if (newStable != buttonStates[swIdx].stableState) {
+            buttonStates[swIdx].stableState = newStable;
+            uint8_t val = newStable ? MIDI_MAX : 0;
+            valueBuffer[swIdx] = invertido ? invertValue(val) : val;
+          }
+        }
+      }
       break;
     }
     }
@@ -232,6 +267,6 @@ uint8_t getValue(uint8_t index) {
   return 0;
 }
 
-uint8_t getNumControles() { return HardwareMap::NUM_CONTROLES; }
+uint8_t getNumControles() { return HardwareMap::TOTAL_SLOTS; }
 
 } // namespace ControlReader
