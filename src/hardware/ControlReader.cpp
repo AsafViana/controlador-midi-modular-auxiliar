@@ -59,6 +59,14 @@ uint8_t processEncoderTransition(uint8_t lastAB, uint8_t currentAB,
   return currentValue;
 }
 
+uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha) {
+  // EMA: filtered = alpha * new + (1 - alpha) * filtered
+  // Using fixed-point: result = (alpha * new + (256 - alpha) * filtered) / 256
+  uint32_t result = (uint32_t)alpha * newRaw +
+                    (uint32_t)(EMA_SCALE - alpha) * currentFiltered;
+  return (uint16_t)(result / EMA_SCALE);
+}
+
 // --- Internal state ---
 
 struct ButtonState {
@@ -74,6 +82,7 @@ struct EncoderState {
 
 struct AnalogState {
   uint8_t lastValue;
+  uint16_t filteredAdc; // Valor ADC filtrado por EMA (mantém resolução 12-bit)
 };
 
 static volatile uint8_t valueBuffer[MAX_CONTROLES];
@@ -89,7 +98,7 @@ void init() {
     valueBuffer[i] = 0;
     buttonStates[i] = {false, false, 0};
     encoderStates[i] = {0, MIDI_MID};
-    analogStates[i] = {0};
+    analogStates[i] = {0, 0};
   }
 
   // Configure GPIOs based on HardwareMap
@@ -127,7 +136,12 @@ void update() {
     case TipoControle::POTENCIOMETRO:
     case TipoControle::SENSOR: {
       uint16_t adcRaw = analogRead(gpio);
-      uint8_t midiValue = mapAdcToMidi(adcRaw);
+
+      // Aplica suavização EMA no valor ADC (mantém resolução 12-bit)
+      analogStates[i].filteredAdc =
+          applyEma(analogStates[i].filteredAdc, adcRaw, EMA_ALPHA);
+
+      uint8_t midiValue = mapAdcToMidi(analogStates[i].filteredAdc);
 
       if (applyDeadzone(midiValue, analogStates[i].lastValue, DEADZONE)) {
         analogStates[i].lastValue = midiValue;

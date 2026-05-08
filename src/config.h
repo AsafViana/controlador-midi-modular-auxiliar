@@ -22,6 +22,13 @@ constexpr uint8_t DEADZONE =
     2; // Tolerância para leituras analógicas (em unidades MIDI 0-127)
 constexpr uint16_t DEBOUNCE_MS = 50; // Tempo de debounce para botões (ms)
 
+// Suavização (EMA - Exponential Moving Average)
+// Alpha em ponto fixo: alpha = EMA_ALPHA / EMA_SCALE
+// Valor padrão: 0.2 (20% novo, 80% anterior) — bom equilíbrio entre resposta e
+// estabilidade
+constexpr uint8_t EMA_ALPHA = 51; // ~0.2 * 256
+constexpr uint16_t EMA_SCALE = 256;
+
 // Limites do protocolo
 constexpr uint8_t MAX_CONTROLES = 16;
 

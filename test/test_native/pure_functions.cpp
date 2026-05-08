@@ -44,4 +44,10 @@ uint8_t processEncoderTransition(uint8_t lastAB, uint8_t currentAB,
   return currentValue;
 }
 
+uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha) {
+  uint32_t result = (uint32_t)alpha * newRaw +
+                    (uint32_t)(EMA_SCALE - alpha) * currentFiltered;
+  return (uint16_t)(result / EMA_SCALE);
+}
+
 } // namespace ControlReader
