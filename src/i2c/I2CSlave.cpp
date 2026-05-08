@@ -33,11 +33,13 @@ void serializeDescriptor(const ControleHW *controls, const uint8_t *values,
 
 // Static variable to store the last valid command received
 static uint8_t lastCommand = 0;
+static volatile bool activityFlag = false;
 
 // onReceive callback: store command if valid, ignore unknown commands
 static void onReceive(int numBytes) {
   if (numBytes < 1)
     return;
+  activityFlag = true;
   uint8_t cmd = Wire.read();
   if (cmd == CMD_DESCRIPTOR || cmd == CMD_READ_VALUES || cmd == CMD_INFO) {
     lastCommand = cmd;
@@ -73,6 +75,7 @@ static void onReceive(int numBytes) {
 
 // onRequest callback: respond based on last valid command
 static void onRequest() {
+  activityFlag = true;
   if (lastCommand == CMD_DESCRIPTOR) {
     uint8_t buffer[1 + (14 * MAX_CONTROLES)];
     const volatile uint8_t *values = ControlReader::getValues();
@@ -115,6 +118,14 @@ static void onRequest() {
 
     Wire.write(infoBuffer, sizeof(infoBuffer));
   }
+}
+
+bool hasRecentActivity() {
+  if (activityFlag) {
+    activityFlag = false;
+    return true;
+  }
+  return false;
 }
 
 // Tenta recuperar o barramento I2C se SDA estiver preso em LOW

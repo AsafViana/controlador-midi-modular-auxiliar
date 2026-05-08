@@ -43,6 +43,9 @@ constexpr uint16_t WDT_TIMEOUT_MS = 5000; // 5 segundos
 // Timeout I2C (ms)
 constexpr uint16_t I2C_TIMEOUT_MS = 1000;
 
+// Modo de baixo consumo
+constexpr uint32_t SLEEP_TIMEOUT_MS = 30000; // 30s sem requisição → light sleep
+
 // Comandos I2C
 constexpr uint8_t CMD_DESCRIPTOR = 0x01;
 constexpr uint8_t CMD_READ_VALUES = 0x02;
