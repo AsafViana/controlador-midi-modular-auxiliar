@@ -34,6 +34,13 @@ constexpr uint8_t FLOAT_DETECT_THRESHOLD =
     30; // Variação MIDI máxima em janela curta
 constexpr uint16_t FLOAT_DETECT_WINDOW_MS = 50; // Janela de tempo para detecção
 
+// Aceleração de encoder
+constexpr uint16_t ENC_ACCEL_FAST_MS =
+    50; // Intervalo entre pulsos para velocidade rápida
+constexpr uint16_t ENC_ACCEL_MED_MS = 150; // Intervalo para velocidade média
+constexpr uint8_t ENC_ACCEL_FAST_STEP = 8; // Incremento em velocidade rápida
+constexpr uint8_t ENC_ACCEL_MED_STEP = 4;  // Incremento em velocidade média
+
 // Limites do protocolo
 constexpr uint8_t MAX_CONTROLES = 16;
 

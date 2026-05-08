@@ -69,6 +69,34 @@ uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha) {
   return (uint16_t)(result / EMA_SCALE);
 }
 
+uint8_t processEncoderWithAccel(uint8_t lastAB, uint8_t currentAB,
+                                uint8_t currentValue, uint32_t elapsedMs) {
+  // Determina direção usando a tabela de quadratura
+  static const int8_t quadratureTable[16] = {0, 1, -1, 0,  -1, 0,  0, 1,
+                                             1, 0, 0,  -1, 0,  -1, 1, 0};
+
+  uint8_t index = ((lastAB & 0x03) << 2) | (currentAB & 0x03);
+  int8_t direction = quadratureTable[index];
+
+  if (direction == 0)
+    return currentValue;
+
+  // Calcula step baseado na velocidade
+  uint8_t step = 1;
+  if (elapsedMs <= ENC_ACCEL_FAST_MS) {
+    step = ENC_ACCEL_FAST_STEP;
+  } else if (elapsedMs <= ENC_ACCEL_MED_MS) {
+    step = ENC_ACCEL_MED_STEP;
+  }
+
+  if (direction == 1) {
+    uint8_t newVal = currentValue + step;
+    return (newVal > MIDI_MAX || newVal < currentValue) ? MIDI_MAX : newVal;
+  } else {
+    return (currentValue >= step) ? (currentValue - step) : 0;
+  }
+}
+
 // --- Internal state ---
 
 struct ButtonState {
@@ -80,6 +108,7 @@ struct ButtonState {
 struct EncoderState {
   uint8_t lastAB;
   uint8_t value;
+  uint32_t lastTransitionMs;
 };
 
 struct AnalogState {
@@ -103,7 +132,7 @@ void init() {
   for (uint8_t i = 0; i < MAX_CONTROLES; i++) {
     valueBuffer[i] = 0;
     buttonStates[i] = {false, false, 0};
-    encoderStates[i] = {0, MIDI_MID};
+    encoderStates[i] = {0, MIDI_MID, 0};
     analogStates[i] = {0, 0, 127, 0, 0, false};
   }
 
@@ -217,12 +246,17 @@ void update() {
       uint8_t b = digitalRead(HardwareMap::getGpioB(i)) ? 1 : 0;
       uint8_t currentAB = (a << 1) | b;
 
-      uint8_t newValue = processEncoderTransition(
-          encoderStates[i].lastAB, currentAB, encoderStates[i].value);
+      if (currentAB != encoderStates[i].lastAB) {
+        uint32_t elapsed = nowMs - encoderStates[i].lastTransitionMs;
+        uint8_t newValue =
+            processEncoderWithAccel(encoderStates[i].lastAB, currentAB,
+                                    encoderStates[i].value, elapsed);
 
-      encoderStates[i].lastAB = currentAB;
-      encoderStates[i].value = newValue;
-      valueBuffer[i] = invertido ? invertValue(newValue) : newValue;
+        encoderStates[i].lastAB = currentAB;
+        encoderStates[i].value = newValue;
+        encoderStates[i].lastTransitionMs = nowMs;
+        valueBuffer[i] = invertido ? invertValue(newValue) : newValue;
+      }
 
       // Push-button integrado do encoder (ocupa slot extra no buffer)
       uint8_t gpioSw = HardwareMap::getGpioSwitch(i);

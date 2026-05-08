@@ -22,5 +22,7 @@ bool applyDebounce(bool reading, bool lastStable, uint32_t lastChangeMs,
 uint8_t invertValue(uint8_t value);
 uint8_t processEncoderTransition(uint8_t lastAB, uint8_t currentAB,
                                  uint8_t currentValue);
+uint8_t processEncoderWithAccel(uint8_t lastAB, uint8_t currentAB,
+                                uint8_t currentValue, uint32_t elapsedMs);
 uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha);
 } // namespace ControlReader
