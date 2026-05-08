@@ -3,6 +3,7 @@
 #include "../hardware/Calibration.h"
 #include "../hardware/ControlReader.h"
 #include "../hardware/HardwareMap.h"
+#include <Arduino.h>
 #include <Wire.h>
 #include <cstring>
 
@@ -79,6 +80,27 @@ static void onRequest() {
     for (uint8_t i = 0; i < count; i++) {
       Wire.write((uint8_t)values[i]);
     }
+  } else if (lastCommand == CMD_INFO) {
+    // Formato: version(3) + name(12, zero-padded) + chipId(4) = 19 bytes
+    uint8_t infoBuffer[19];
+    memset(infoBuffer, 0, sizeof(infoBuffer));
+
+    // Versão: major.minor.patch
+    infoBuffer[0] = FW_VERSION_MAJOR;
+    infoBuffer[1] = FW_VERSION_MINOR;
+    infoBuffer[2] = FW_VERSION_PATCH;
+
+    // Nome do módulo (12 bytes, zero-padded)
+    strncpy(reinterpret_cast<char *>(&infoBuffer[3]), MODULE_NAME, 12);
+
+    // Chip ID único (últimos 4 bytes do MAC address)
+    uint64_t mac = ESP.getEfuseMac();
+    infoBuffer[15] = (uint8_t)(mac);
+    infoBuffer[16] = (uint8_t)(mac >> 8);
+    infoBuffer[17] = (uint8_t)(mac >> 16);
+    infoBuffer[18] = (uint8_t)(mac >> 24);
+
+    Wire.write(infoBuffer, sizeof(infoBuffer));
   }
 }
 
