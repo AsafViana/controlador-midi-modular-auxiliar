@@ -29,6 +29,11 @@ constexpr uint16_t DEBOUNCE_MS = 50; // Tempo de debounce para botões (ms)
 constexpr uint8_t EMA_ALPHA = 51; // ~0.2 * 256
 constexpr uint16_t EMA_SCALE = 256;
 
+// Detecção de pino flutuante
+constexpr uint8_t FLOAT_DETECT_THRESHOLD =
+    30; // Variação MIDI máxima em janela curta
+constexpr uint16_t FLOAT_DETECT_WINDOW_MS = 50; // Janela de tempo para detecção
+
 // Limites do protocolo
 constexpr uint8_t MAX_CONTROLES = 16;
 

@@ -84,6 +84,10 @@ struct EncoderState {
 struct AnalogState {
   uint8_t lastValue;
   uint16_t filteredAdc; // Valor ADC filtrado por EMA (mantém resolução 12-bit)
+  uint8_t minInWindow;  // Mínimo MIDI na janela de detecção
+  uint8_t maxInWindow;  // Máximo MIDI na janela de detecção
+  uint32_t windowStartMs; // Início da janela de detecção
+  bool disconnected;      // Flag de pino flutuante detectado
 };
 
 static volatile uint8_t valueBuffer[MAX_CONTROLES];
@@ -99,7 +103,7 @@ void init() {
     valueBuffer[i] = 0;
     buttonStates[i] = {false, false, 0};
     encoderStates[i] = {0, MIDI_MID};
-    analogStates[i] = {0, 0};
+    analogStates[i] = {0, 0, 127, 0, 0, false};
   }
 
   // Configure GPIOs based on HardwareMap
@@ -150,6 +154,28 @@ void update() {
           applyEma(analogStates[i].filteredAdc, adcCal, EMA_ALPHA);
 
       uint8_t midiValue = mapAdcToMidi(analogStates[i].filteredAdc);
+
+      // Detecção de pino flutuante: variância alta em janela curta
+      if ((nowMs - analogStates[i].windowStartMs) >= FLOAT_DETECT_WINDOW_MS) {
+        // Fim da janela: verifica variância
+        uint8_t range =
+            analogStates[i].maxInWindow - analogStates[i].minInWindow;
+        analogStates[i].disconnected = (range >= FLOAT_DETECT_THRESHOLD);
+        // Reset janela
+        analogStates[i].minInWindow = midiValue;
+        analogStates[i].maxInWindow = midiValue;
+        analogStates[i].windowStartMs = nowMs;
+      } else {
+        // Atualiza min/max na janela
+        if (midiValue < analogStates[i].minInWindow)
+          analogStates[i].minInWindow = midiValue;
+        if (midiValue > analogStates[i].maxInWindow)
+          analogStates[i].maxInWindow = midiValue;
+      }
+
+      // Se desconectado, congela último valor válido
+      if (analogStates[i].disconnected)
+        break;
 
       if (applyDeadzone(midiValue, analogStates[i].lastValue, DEADZONE)) {
         analogStates[i].lastValue = midiValue;
