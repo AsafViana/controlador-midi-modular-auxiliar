@@ -4,6 +4,7 @@
 #include "../hardware/ControlReader.h"
 #include "../hardware/HardwareMap.h"
 #include "../hardware/PersistentConfig.h"
+#include "../ota/OTAHandler.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <cstring>
@@ -65,6 +66,40 @@ static void onReceive(int numBytes) {
     }
     if (idx == 5) {
       PersistentConfig::applyFromI2C(payload, idx);
+    }
+  } else if (cmd == CMD_OTA_BEGIN) {
+    lastCommand = cmd;
+    if (Wire.available() >= 4) {
+      uint32_t size = Wire.read();
+      size |= (uint32_t)Wire.read() << 8;
+      size |= (uint32_t)Wire.read() << 16;
+      size |= (uint32_t)Wire.read() << 24;
+      OTAHandler::begin(size);
+    }
+  } else if (cmd == CMD_OTA_DATA) {
+    lastCommand = cmd;
+    if (Wire.available() >= 4) {
+      uint32_t offset = Wire.read();
+      offset |= (uint32_t)Wire.read() << 8;
+      offset |= (uint32_t)Wire.read() << 16;
+      offset |= (uint32_t)Wire.read() << 24;
+      uint8_t dataBuf[240];
+      uint16_t dataLen = 0;
+      while (Wire.available() && dataLen < sizeof(dataBuf)) {
+        dataBuf[dataLen++] = Wire.read();
+      }
+      if (dataLen > 0) {
+        OTAHandler::writeBlock(offset, dataBuf, dataLen);
+      }
+    }
+  } else if (cmd == CMD_OTA_END) {
+    lastCommand = cmd;
+    if (Wire.available() >= 4) {
+      uint32_t crc = Wire.read();
+      crc |= (uint32_t)Wire.read() << 8;
+      crc |= (uint32_t)Wire.read() << 16;
+      crc |= (uint32_t)Wire.read() << 24;
+      OTAHandler::end(crc);
     }
   }
   // Discard any remaining bytes

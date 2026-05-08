@@ -59,6 +59,10 @@ constexpr uint8_t CMD_READ_VALUES = 0x02;
 constexpr uint8_t CMD_INFO = 0x03;
 constexpr uint8_t CMD_CALIBRATE = 0x04;
 constexpr uint8_t CMD_SET_CONFIG = 0x05;
+constexpr uint8_t CMD_OTA_BEGIN = 0x10; // Inicia OTA: payload = [size(4)]
+constexpr uint8_t CMD_OTA_DATA =
+    0x11; // Bloco de dados: payload = [offset(4) + data(N)]
+constexpr uint8_t CMD_OTA_END = 0x12; // Finaliza OTA: payload = [crc32(4)]
 
 // Constantes MIDI
 constexpr uint8_t MIDI_MAX = 127;
