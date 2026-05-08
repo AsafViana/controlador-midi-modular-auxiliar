@@ -53,6 +53,10 @@ constexpr uint16_t I2C_TIMEOUT_MS = 1000;
 // Modo de baixo consumo
 constexpr uint32_t SLEEP_TIMEOUT_MS = 30000; // 30s sem requisição → light sleep
 
+// Rate limiting para leitura analógica
+constexpr uint8_t ANALOG_READ_INTERVAL_MS =
+    5; // Ler analógicos a cada 5ms (200Hz)
+
 // Comandos I2C
 constexpr uint8_t CMD_DESCRIPTOR = 0x01;
 constexpr uint8_t CMD_READ_VALUES = 0x02;

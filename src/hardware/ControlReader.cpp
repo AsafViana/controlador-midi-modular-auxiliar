@@ -118,6 +118,7 @@ struct AnalogState {
   uint8_t maxInWindow;  // Máximo MIDI na janela de detecção
   uint32_t windowStartMs; // Início da janela de detecção
   bool disconnected;      // Flag de pino flutuante detectado
+  uint32_t lastReadMs;    // Rate limiting: último momento de leitura
 };
 
 static volatile uint8_t valueBuffer[MAX_CONTROLES];
@@ -133,7 +134,7 @@ void init() {
     valueBuffer[i] = 0;
     buttonStates[i] = {false, false, 0};
     encoderStates[i] = {0, MIDI_MID, 0};
-    analogStates[i] = {0, 0, 127, 0, 0, false};
+    analogStates[i] = {0, 0, 127, 0, 0, false, 0};
   }
 
   // Configure GPIOs based on HardwareMap
@@ -175,6 +176,11 @@ void update() {
     switch (tipo) {
     case TipoControle::POTENCIOMETRO:
     case TipoControle::SENSOR: {
+      // Rate limiting: ler analógicos a cada ANALOG_READ_INTERVAL_MS
+      if ((nowMs - analogStates[i].lastReadMs) < ANALOG_READ_INTERVAL_MS)
+        break;
+      analogStates[i].lastReadMs = nowMs;
+
       uint16_t adcRaw = analogRead(gpio);
 
       // Alimenta calibração se em modo calibração
