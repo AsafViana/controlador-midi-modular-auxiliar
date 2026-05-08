@@ -1,4 +1,5 @@
 #include "config.h"
+#include "hardware/AnalogMux.h"
 #include "hardware/Calibration.h"
 #include "hardware/ControlReader.h"
 #include "hardware/PersistentConfig.h"
@@ -21,6 +22,7 @@ void setup() {
 
   PersistentConfig::init();
   Calibration::init();
+  AnalogMux::init();
   ControlReader::init();
   I2CSlave::init();
 
