@@ -1,5 +1,6 @@
 #include "ControlReader.h"
 #include "../config.h"
+#include "Calibration.h"
 #include "HardwareMap.h"
 #include <Arduino.h>
 
@@ -137,9 +138,16 @@ void update() {
     case TipoControle::SENSOR: {
       uint16_t adcRaw = analogRead(gpio);
 
+      // Alimenta calibração se em modo calibração
+      Calibration::feedRawValue(i, adcRaw);
+
+      // Aplica calibração: mapeia [min,max] → [0, 4095]
+      auto cal = Calibration::getChannelCal(i);
+      uint16_t adcCal = Calibration::applyCal(adcRaw, cal.adcMin, cal.adcMax);
+
       // Aplica suavização EMA no valor ADC (mantém resolução 12-bit)
       analogStates[i].filteredAdc =
-          applyEma(analogStates[i].filteredAdc, adcRaw, EMA_ALPHA);
+          applyEma(analogStates[i].filteredAdc, adcCal, EMA_ALPHA);
 
       uint8_t midiValue = mapAdcToMidi(analogStates[i].filteredAdc);
 

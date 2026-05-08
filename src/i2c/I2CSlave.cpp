@@ -1,5 +1,6 @@
 #include "I2CSlave.h"
 #include "../config.h"
+#include "../hardware/Calibration.h"
 #include "../hardware/ControlReader.h"
 #include "../hardware/HardwareMap.h"
 #include <Wire.h>
@@ -36,8 +37,19 @@ static void onReceive(int numBytes) {
   if (numBytes < 1)
     return;
   uint8_t cmd = Wire.read();
-  if (cmd == CMD_DESCRIPTOR || cmd == CMD_READ_VALUES) {
+  if (cmd == CMD_DESCRIPTOR || cmd == CMD_READ_VALUES || cmd == CMD_INFO) {
     lastCommand = cmd;
+  } else if (cmd == CMD_CALIBRATE) {
+    lastCommand = cmd;
+    // Segundo byte: canal a calibrar (0xFF = parar calibração)
+    if (Wire.available()) {
+      uint8_t channel = Wire.read();
+      if (channel == 0xFF) {
+        Calibration::stopCalibration();
+      } else {
+        Calibration::startCalibration(channel);
+      }
+    }
   }
   // Discard any remaining bytes
   while (Wire.available()) {

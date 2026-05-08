@@ -1,4 +1,5 @@
 #include "config.h"
+#include "hardware/Calibration.h"
 #include "hardware/ControlReader.h"
 #include "i2c/I2CSlave.h"
 #include <Arduino.h>
@@ -14,6 +15,7 @@ void setup() {
   esp_task_wdt_init(&wdtConfig);
   esp_task_wdt_add(NULL); // Adiciona a task atual (loopTask) ao WDT
 
+  Calibration::init();
   ControlReader::init();
   I2CSlave::init();
 }
