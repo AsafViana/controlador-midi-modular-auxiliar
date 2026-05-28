@@ -1,0 +1,31 @@
+{
+  "hooks": [
+    {
+      "id": "firmware-cpp-on-save-review",
+      "name": "C++ Firmware Save Review",
+      "description": "Verifica padrões de firmware embarcado ao salvar arquivos C++",
+      "eventType": "fileEdited",
+      "hookAction": "askAgent",
+      "filePatterns": "**/*.{cpp,h}",
+      "outputPrompt": "Revise o arquivo salvo e verifique (contexto: firmware ESP32-C3, C++17, PlatformIO):\n1. Uso de alocação dinâmica (new, malloc, std::vector sem tamanho fixo, String)\n2. Uso de delay() no loop principal (bloqueia I2C e leituras)\n3. Uso de float/double onde ponto fixo seria suficiente\n4. Uso de 'int' genérico ao invés de tipos explícitos (uint8_t, uint16_t, etc.)\n5. Constantes hardcoded que deveriam estar em config.h\n6. GPIOs inválidos para o tipo de controle (ADC: 0-5 apenas; Digital: 0-10, 18-21)\n7. Falta de static_assert para validação de GPIO\n8. Serial.print/println (não há USB serial em modo I2C slave)\n9. Variáveis globais não-static em .cpp\n10. Headers sem #pragma once\n\nSe encontrar problemas, sugira correções inline de forma concisa. Não bloqueie, apenas sugira."
+    },
+    {
+      "id": "firmware-hardwaremap-review",
+      "name": "HardwareMap Review",
+      "description": "Valida configuração de controles ao salvar HardwareMap.h",
+      "eventType": "fileEdited",
+      "hookAction": "askAgent",
+      "filePatterns": "**/HardwareMap.h",
+      "outputPrompt": "Revise o HardwareMap.h e valide:\n1. Todos os potenciômetros/sensores usam GPIO 0-5 (ADC)\n2. Todos os botões/encoders usam GPIO 0-10 ou 18-21 (digital)\n3. Nenhum controle usa GPIO 8 ou 9 (reservados I2C)\n4. Não há GPIO duplicado entre controles\n5. Não há CC MIDI duplicado\n6. Máximo 16 controles no array\n7. Encoders têm GPIO_B válido e diferente do GPIO principal\n8. Labels com até 12 caracteres\n9. CC MIDI no range 1-127\n\nSe encontrar problemas, explique claramente o que está errado e sugira a correção."
+    },
+    {
+      "id": "firmware-config-review",
+      "name": "Config Review",
+      "description": "Verifica alterações em config.h",
+      "eventType": "fileEdited",
+      "hookAction": "askAgent",
+      "filePatterns": "**/config.h",
+      "outputPrompt": "Revise config.h e verifique:\n1. Todas as constantes são constexpr (não #define)\n2. Endereço I2C no range 0x20-0x27\n3. Timeouts razoáveis (WDT: 3-10s, I2C: 500-2000ms, Sleep: 10-120s)\n4. EMA alpha no range adequado (20-80% = 51-204 com escala 256)\n5. MAX_CONTROLES = 16 (não alterar sem atualizar protocolo)\n6. Comandos I2C não conflitam\n7. Tipos corretos para cada constante (uint8_t, uint16_t, uint32_t)\n\nSugira correções se encontrar problemas."
+    }
+  ]
+}

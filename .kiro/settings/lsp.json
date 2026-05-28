@@ -1,0 +1,19 @@
+{
+  "languages": {
+    "cpp": {
+      "name": "clangd",
+      "command": "clangd",
+      "args": [
+        "--background-index",
+        "--compile-commands-dir=.",
+        "--header-insertion=iwyu",
+        "--clang-tidy"
+      ],
+      "file_extensions": ["cpp", "c", "h", "hpp", "ino"],
+      "project_patterns": ["compile_commands.json", "platformio.ini"],
+      "exclude_patterns": ["**/.pio/**", "**/build/**"],
+      "multi_workspace": false,
+      "request_timeout_secs": 60
+    }
+  }
+}

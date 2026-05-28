@@ -1,0 +1,13 @@
+{
+  "hooks": [
+    {
+      "id": "firmware-pre-commit-validation",
+      "name": "Firmware Pre-Commit Validation",
+      "description": "Valida código gerado pelo Kiro antes de escrever (firmware ESP32-C3)",
+      "eventType": "preToolUse",
+      "hookAction": "askAgent",
+      "toolTypes": "write",
+      "outputPrompt": "Antes de escrever este código, valide as regras do firmware ESP32-C3:\n\n## BLOQUEAR se encontrar:\n- Alocação dinâmica: new, malloc, free, std::vector (sem tamanho fixo), String, std::string\n- delay() no loop principal ou em qualquer função chamada pelo loop\n- Serial.print/println/printf (não há USB serial em modo I2C slave)\n- GPIO 8 ou 9 usado para controle (reservados para I2C)\n- Potenciômetro/sensor em GPIO > 5 (não tem ADC)\n- Constantes com #define que poderiam ser constexpr\n- Tipo 'int' genérico (usar uint8_t, uint16_t, uint32_t, int8_t, etc.)\n- Código comentado\n- Mais de 16 controles em CONTROLES[]\n- CC MIDI fora do range 1-127 ou duplicado\n- float/double em cálculos que podem ser ponto fixo\n- Header sem #pragma once\n- Watchdog não alimentado em path de execução do loop\n\n## ALERTAR (não bloquear):\n- Função com mais de 40 linhas\n- Arquivo com mais de 300 linhas\n- Variável sem tipo explícito (auto em contexto ambíguo)\n- Falta de comentário em lógica de hardware não-óbvia\n- Constante mágica que deveria estar em config.h\n- Loop sem rate limiting para leitura ADC\n\nSe encontrar violações bloqueantes, recuse a escrita e explique o motivo com a correção sugerida."
+    }
+  ]
+}
