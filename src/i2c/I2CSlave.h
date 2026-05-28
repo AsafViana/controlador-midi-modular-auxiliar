@@ -12,6 +12,9 @@ void init();
 // Verifica se houve atividade I2C recente (desde última chamada)
 bool hasRecentActivity();
 
+// Verifica se OTA completou e restart está pendente
+bool isOtaRestartPending();
+
 // Pure serialization function (testable without hardware)
 void serializeDescriptor(const ControleHW *controls, const uint8_t *values,
                          uint8_t count, uint8_t *outBuffer);

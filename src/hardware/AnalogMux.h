@@ -18,14 +18,15 @@ namespace AnalogMux {
 // Máximo de multiplexadores suportados
 constexpr uint8_t MAX_MUX = 2;
 
-// Configuração dos muxes (definida pelo usuário)
-// Deixar vazio se não usar mux
-constexpr MuxConfig MUX_CONFIG[] = {
-    // Exemplo: {gpioSig, S0, S1, S2, S3, numChannels}
-    // {"5, 6, 7, 8, 0, 8},  // CD4051 no GPIO 5, seleção 6/7/8
-};
+// Número de muxes configurados (alterar ao adicionar muxes)
+constexpr uint8_t NUM_MUX = 0;
 
-constexpr uint8_t NUM_MUX = sizeof(MUX_CONFIG) / sizeof(MUX_CONFIG[0]);
+// Configuração dos muxes (definida pelo usuário)
+// Descomentar e preencher ao usar multiplexadores, ajustar NUM_MUX acima.
+// Exemplo para CD4051 no GPIO 5, seleção 6/7/10:
+//   constexpr MuxConfig MUX_CONFIG[NUM_MUX] = {
+//       {5, 6, 7, 10, 0, 8},
+//   };
 
 // Inicializa GPIOs dos multiplexadores
 void init();

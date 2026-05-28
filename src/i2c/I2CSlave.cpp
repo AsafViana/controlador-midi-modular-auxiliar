@@ -32,9 +32,15 @@ void serializeDescriptor(const ControleHW *controls, const uint8_t *values,
   }
 }
 
-// Static variable to store the last valid command received
-static uint8_t lastCommand = 0;
+// Último comando recebido (volatile: escrito em onReceive, lido em onRequest)
+static volatile uint8_t lastCommand = 0;
 static volatile bool activityFlag = false;
+
+// Flag para restart após OTA (evita delay/restart dentro de ISR)
+static volatile bool otaRestartPending = false;
+
+// Spinlock para proteção de acesso ao valueBuffer entre loop e ISR
+static portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 // onReceive callback: store command if valid, ignore unknown commands
 static void onReceive(int numBytes) {
@@ -70,7 +76,7 @@ static void onReceive(int numBytes) {
   } else if (cmd == CMD_OTA_BEGIN) {
     lastCommand = cmd;
     if (Wire.available() >= 4) {
-      uint32_t size = Wire.read();
+      uint32_t size = (uint32_t)Wire.read();
       size |= (uint32_t)Wire.read() << 8;
       size |= (uint32_t)Wire.read() << 16;
       size |= (uint32_t)Wire.read() << 24;
@@ -79,27 +85,35 @@ static void onReceive(int numBytes) {
   } else if (cmd == CMD_OTA_DATA) {
     lastCommand = cmd;
     if (Wire.available() >= 4) {
-      uint32_t offset = Wire.read();
+      uint32_t offset = (uint32_t)Wire.read();
       offset |= (uint32_t)Wire.read() << 8;
       offset |= (uint32_t)Wire.read() << 16;
       offset |= (uint32_t)Wire.read() << 24;
-      uint8_t dataBuf[240];
+      uint8_t dataBuf[OTA_MAX_BLOCK_SIZE];
       uint16_t dataLen = 0;
-      while (Wire.available() && dataLen < sizeof(dataBuf)) {
+      while (Wire.available() && dataLen < OTA_MAX_BLOCK_SIZE) {
         dataBuf[dataLen++] = Wire.read();
       }
-      if (dataLen > 0) {
+      // Rejeita bloco se há dados excedentes (truncamento = corrupção)
+      if (Wire.available()) {
+        while (Wire.available()) {
+          Wire.read();
+        }
+        // Bloco maior que OTA_MAX_BLOCK_SIZE — não processar
+      } else if (dataLen > 0) {
         OTAHandler::writeBlock(offset, dataBuf, dataLen);
       }
     }
   } else if (cmd == CMD_OTA_END) {
     lastCommand = cmd;
     if (Wire.available() >= 4) {
-      uint32_t crc = Wire.read();
+      uint32_t crc = (uint32_t)Wire.read();
       crc |= (uint32_t)Wire.read() << 8;
       crc |= (uint32_t)Wire.read() << 16;
       crc |= (uint32_t)Wire.read() << 24;
-      OTAHandler::end(crc);
+      if (OTAHandler::end(crc)) {
+        otaRestartPending = true;
+      }
     }
   }
   // Discard any remaining bytes
@@ -111,27 +125,40 @@ static void onReceive(int numBytes) {
 // onRequest callback: respond based on last valid command
 static void onRequest() {
   activityFlag = true;
-  if (lastCommand == CMD_DESCRIPTOR) {
+  uint8_t cmd = lastCommand;
+
+  if (cmd == CMD_DESCRIPTOR) {
     uint8_t buffer[1 + (14 * MAX_CONTROLES)];
     const volatile uint8_t *values = ControlReader::getValues();
     uint8_t count = HardwareMap::NUM_CONTROLES;
 
-    // Cast volatile values to non-volatile for serialization
+    // Cópia atômica dos valores (minimiza janela de inconsistência)
     uint8_t valsCopy[MAX_CONTROLES];
+    portENTER_CRITICAL_SAFE(&spinlock);
     for (uint8_t i = 0; i < count; i++) {
       valsCopy[i] = values[i];
     }
+    portEXIT_CRITICAL_SAFE(&spinlock);
 
     serializeDescriptor(HardwareMap::CONTROLES, valsCopy, count, buffer);
     uint16_t totalSize = 1 + (14 * count);
     Wire.write(buffer, totalSize);
-  } else if (lastCommand == CMD_READ_VALUES) {
+  } else if (cmd == CMD_READ_VALUES) {
     const volatile uint8_t *values = ControlReader::getValues();
-    uint8_t count = HardwareMap::NUM_CONTROLES;
+    uint8_t count = HardwareMap::TOTAL_SLOTS;
+
+    // Cópia atômica dos valores
+    uint8_t valsCopy[MAX_CONTROLES];
+    portENTER_CRITICAL_SAFE(&spinlock);
     for (uint8_t i = 0; i < count; i++) {
-      Wire.write((uint8_t)values[i]);
+      valsCopy[i] = values[i];
     }
-  } else if (lastCommand == CMD_INFO) {
+    portEXIT_CRITICAL_SAFE(&spinlock);
+
+    for (uint8_t i = 0; i < count; i++) {
+      Wire.write(valsCopy[i]);
+    }
+  } else if (cmd == CMD_INFO) {
     // Formato: version(3) + name(12, zero-padded) + chipId(4) = 19 bytes
     uint8_t infoBuffer[19];
     memset(infoBuffer, 0, sizeof(infoBuffer));
@@ -163,10 +190,10 @@ bool hasRecentActivity() {
   return false;
 }
 
+bool isOtaRestartPending() { return otaRestartPending; }
+
 // Tenta recuperar o barramento I2C se SDA estiver preso em LOW
 static void recoverI2CBus() {
-  Wire.end();
-  pinMode(PIN_SDA, INPUT);
   pinMode(PIN_SCL, OUTPUT);
 
   // Toggle SCL até 9 vezes para liberar SDA
@@ -179,27 +206,21 @@ static void recoverI2CBus() {
       break; // SDA liberado
     }
   }
-
-  // Reinicializa o barramento
-  Wire.setBufferSize(256);
-  Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
-  Wire.setTimeOut(I2C_TIMEOUT_MS);
-  Wire.onReceive(onReceive);
-  Wire.onRequest(onRequest);
 }
 
 void init() {
+  // Verifica se o barramento está travado ANTES de inicializar I2C
+  pinMode(PIN_SDA, INPUT);
+  pinMode(PIN_SCL, INPUT);
+  if (digitalRead(PIN_SDA) == LOW) {
+    recoverI2CBus();
+  }
+
   Wire.setBufferSize(256);
   Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
   Wire.setTimeOut(I2C_TIMEOUT_MS);
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
-
-  // Verifica se o barramento está travado na inicialização
-  pinMode(PIN_SDA, INPUT);
-  if (digitalRead(PIN_SDA) == LOW) {
-    recoverI2CBus();
-  }
 }
 
 } // namespace I2CSlave

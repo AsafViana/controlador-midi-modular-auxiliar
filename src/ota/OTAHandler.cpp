@@ -7,6 +7,22 @@ namespace OTAHandler {
 static OTAState state = OTAState::IDLE;
 static uint32_t totalFwSize = 0;
 static uint32_t bytesWritten = 0;
+static uint32_t runningCrc = 0xFFFFFFFF;
+
+// Tabela CRC32 (polinômio 0xEDB88320, padrão Ethernet/ZIP)
+static uint32_t crc32Update(uint32_t crc, const uint8_t *data, uint16_t len) {
+  for (uint16_t i = 0; i < len; i++) {
+    crc ^= data[i];
+    for (uint8_t bit = 0; bit < 8; bit++) {
+      if (crc & 1) {
+        crc = (crc >> 1) ^ 0xEDB88320;
+      } else {
+        crc >>= 1;
+      }
+    }
+  }
+  return crc;
+}
 
 bool begin(uint32_t totalSize) {
   if (state == OTAState::RECEIVING) {
@@ -25,6 +41,7 @@ bool begin(uint32_t totalSize) {
 
   totalFwSize = totalSize;
   bytesWritten = 0;
+  runningCrc = 0xFFFFFFFF;
   state = OTAState::RECEIVING;
   return true;
 }
@@ -42,6 +59,9 @@ bool writeBlock(uint32_t offset, const uint8_t *data, uint16_t len) {
     return false;
   }
 
+  // Atualiza CRC32 incremental
+  runningCrc = crc32Update(runningCrc, data, len);
+
   bytesWritten += len;
   return true;
 }
@@ -56,9 +76,15 @@ bool end(uint32_t expectedCrc) {
     return false;
   }
 
-  // O ESP32 Update library verifica internamente o MD5/hash
-  // O CRC32 é uma verificação adicional do protocolo I2C
-  (void)expectedCrc; // TODO: implementar verificação CRC32 do payload
+  // Finaliza CRC32 (XOR final)
+  uint32_t finalCrc = runningCrc ^ 0xFFFFFFFF;
+
+  // Verifica CRC32 do payload transmitido via I2C
+  if (finalCrc != expectedCrc) {
+    state = OTAState::ERROR;
+    Update.abort();
+    return false;
+  }
 
   if (!Update.end(true)) {
     state = OTAState::ERROR;
@@ -67,11 +93,8 @@ bool end(uint32_t expectedCrc) {
 
   state = OTAState::COMPLETE;
 
-  // Reinicia após OTA bem-sucedido
-  delay(100);
-  ESP.restart();
-
-  return true; // Nunca alcançado
+  // Restart será feito pelo loop principal via isOtaRestartPending()
+  return true;
 }
 
 void abort() {
@@ -81,6 +104,7 @@ void abort() {
   state = OTAState::IDLE;
   totalFwSize = 0;
   bytesWritten = 0;
+  runningCrc = 0xFFFFFFFF;
 }
 
 OTAState getState() { return state; }

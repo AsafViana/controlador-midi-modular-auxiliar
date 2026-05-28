@@ -107,3 +107,20 @@ static_assert(validateAllControls(),
               "Invalid GPIO configuration detected! "
               "ADC controls (POT/SENSOR) must use GPIO 0-5. "
               "Digital controls (BUTTON/ENCODER) must use GPIO 0-10 or 18-21.");
+
+// --- Validação de CC MIDI duplicado em tempo de compilação ---
+
+constexpr bool hasDuplicateCC(uint8_t idx = 0) {
+  if (idx >= HardwareMap::NUM_CONTROLES)
+    return false;
+  for (uint8_t j = idx + 1; j < HardwareMap::NUM_CONTROLES; j++) {
+    if (HardwareMap::CONTROLES[idx].ccPadrao ==
+        HardwareMap::CONTROLES[j].ccPadrao)
+      return true;
+  }
+  return hasDuplicateCC(idx + 1);
+}
+
+static_assert(!hasDuplicateCC(),
+              "Duplicate MIDI CC detected! Each control must have a unique CC "
+              "number within the same module.");

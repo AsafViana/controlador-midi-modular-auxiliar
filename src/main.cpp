@@ -33,6 +33,12 @@ void loop() {
   ControlReader::update();
   esp_task_wdt_reset(); // Alimenta o watchdog a cada iteração
 
+  // Verifica se OTA completou e restart está pendente
+  if (I2CSlave::isOtaRestartPending()) {
+    delay(100); // Aguarda I2C finalizar transmissão
+    ESP.restart();
+  }
+
   // Verifica se houve atividade I2C recente
   if (I2CSlave::hasRecentActivity()) {
     lastActivityMs = millis();

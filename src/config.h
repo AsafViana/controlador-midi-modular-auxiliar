@@ -45,7 +45,7 @@ constexpr uint8_t ENC_ACCEL_MED_STEP = 4;  // Incremento em velocidade média
 constexpr uint8_t MAX_CONTROLES = 16;
 
 // Watchdog Timer
-constexpr uint16_t WDT_TIMEOUT_MS = 5000; // 5 segundos
+constexpr uint32_t WDT_TIMEOUT_MS = 5000; // 5 segundos
 
 // Timeout I2C (ms)
 constexpr uint16_t I2C_TIMEOUT_MS = 1000;
@@ -74,3 +74,7 @@ constexpr uint8_t MIDI_MID = 64;
 
 // ADC
 constexpr uint16_t ADC_MAX = 4095; // ESP32-C3: 12-bit ADC
+
+// OTA
+constexpr uint16_t OTA_MAX_BLOCK_SIZE =
+    240; // Máximo de bytes por bloco OTA via I2C

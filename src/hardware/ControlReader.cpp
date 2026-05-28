@@ -303,7 +303,7 @@ void update() {
 const volatile uint8_t *getValues() { return valueBuffer; }
 
 uint8_t getValue(uint8_t index) {
-  if (index < HardwareMap::NUM_CONTROLES) {
+  if (index < HardwareMap::TOTAL_SLOTS) {
     return valueBuffer[index];
   }
   return 0;
