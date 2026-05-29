@@ -219,6 +219,11 @@ void init() {
   Wire.setBufferSize(256);
   Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
   Wire.setTimeOut(I2C_TIMEOUT_MS);
+
+  // Disable internal pull-ups: external 10k resistors are used on the bus
+  pinMode(PIN_SDA, INPUT);
+  pinMode(PIN_SCL, INPUT);
+
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
 }
