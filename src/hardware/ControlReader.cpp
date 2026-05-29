@@ -138,24 +138,25 @@ void init() {
   }
 
   // Configure GPIOs based on HardwareMap
+  // Pull-ups are handled externally via 10k resistors
   for (uint8_t i = 0; i < HardwareMap::NUM_CONTROLES; i++) {
     TipoControle tipo = HardwareMap::getTipo(i);
     uint8_t gpio = HardwareMap::getGpio(i);
 
     switch (tipo) {
     case TipoControle::BOTAO:
-      pinMode(gpio, INPUT_PULLUP);
+      pinMode(gpio, INPUT);
       break;
     case TipoControle::POTENCIOMETRO:
     case TipoControle::SENSOR:
       pinMode(gpio, INPUT);
       break;
     case TipoControle::ENCODER:
-      pinMode(gpio, INPUT_PULLUP);
-      pinMode(HardwareMap::getGpioB(i), INPUT_PULLUP);
+      pinMode(gpio, INPUT);
+      pinMode(HardwareMap::getGpioB(i), INPUT);
       // Configura push-button do encoder se definido
       if (HardwareMap::getGpioSwitch(i) > 0) {
-        pinMode(HardwareMap::getGpioSwitch(i), INPUT_PULLUP);
+        pinMode(HardwareMap::getGpioSwitch(i), INPUT);
       }
       // Initialize encoder value at MIDI_MID
       valueBuffer[i] = MIDI_MID;
@@ -226,7 +227,7 @@ void update() {
     }
 
     case TipoControle::BOTAO: {
-      bool reading = (digitalRead(gpio) == LOW); // INPUT_PULLUP: LOW = pressed
+      bool reading = (digitalRead(gpio) == LOW); // Pull-up externo: LOW = pressed
 
       // Track when reading changes from last reading
       if (reading != buttonStates[i].lastReading) {
@@ -276,7 +277,7 @@ void update() {
           }
         }
         if (swIdx < MAX_CONTROLES) {
-          bool reading = (digitalRead(gpioSw) == LOW);
+          bool reading = (digitalRead(gpioSw) == LOW); // Pull-up externo: LOW = pressed
 
           if (reading != buttonStates[swIdx].lastReading) {
             buttonStates[swIdx].lastChangeMs = nowMs;
