@@ -24,10 +24,7 @@ namespace HardwareMap {
 // Definido pelo usuário conforme o hardware montado
 constexpr ControleHW CONTROLES[] = {
     // {"Label", gpio, tipo, cc, invertido, gpioB, gpioSwitch}
-    {"Pot1", 0, TipoControle::POTENCIOMETRO, 1, false, 0, 0},
-    {"Btn1", 1, TipoControle::BOTAO, 2, false, 0, 0},
-    {"Enc1", 2, TipoControle::ENCODER, 3, false, 3,
-     4}, // Encoder com push-button no GPIO 4
+    {"Pot Aux", 0, TipoControle::POTENCIOMETRO, 1, false, 0, 0},
 };
 
 constexpr uint8_t NUM_CONTROLES = sizeof(CONTROLES) / sizeof(CONTROLES[0]);

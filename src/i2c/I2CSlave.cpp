@@ -145,7 +145,7 @@ static void onRequest() {
     Wire.write(buffer, totalSize);
   } else if (cmd == CMD_READ_VALUES) {
     const volatile uint8_t *values = ControlReader::getValues();
-    uint8_t count = HardwareMap::TOTAL_SLOTS;
+    uint8_t count = HardwareMap::NUM_CONTROLES;
 
     // Cópia atômica dos valores
     uint8_t valsCopy[MAX_CONTROLES];
@@ -220,9 +220,10 @@ void init() {
   Wire.begin((uint8_t)I2C_ADDRESS, (int)PIN_SDA, (int)PIN_SCL);
   Wire.setTimeOut(I2C_TIMEOUT_MS);
 
-  // Disable internal pull-ups: external 10k resistors are used on the bus
-  pinMode(PIN_SDA, INPUT);
-  pinMode(PIN_SCL, INPUT);
+  // Ativa pull-up interno como fallback (pull-ups externos 4.7-10kΩ ainda são
+  // recomendados)
+  pinMode(PIN_SDA, INPUT_PULLUP);
+  pinMode(PIN_SCL, INPUT_PULLUP);
 
   Wire.onReceive(onReceive);
   Wire.onRequest(onRequest);
