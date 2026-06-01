@@ -158,6 +158,9 @@ static void onRequest() {
     for (uint8_t i = 0; i < count; i++) {
       Wire.write(valsCopy[i]);
     }
+
+    // Master leu os valores — limpa sinalização de interrupt
+    ControlReader::clearSignal();
   } else if (cmd == CMD_INFO) {
     // Formato: version(3) + name(12, zero-padded) + chipId(4) = 19 bytes
     uint8_t infoBuffer[19];

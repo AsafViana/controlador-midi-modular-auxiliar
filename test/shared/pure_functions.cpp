@@ -76,6 +76,11 @@ uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha) {
   return (uint16_t)(result / EMA_SCALE);
 }
 
+// Stubs para funções que dependem de hardware (GPIO)
+// Não executam nada em testes nativos
+void signalChange() {}
+void clearSignal() {}
+
 } // namespace ControlReader
 
 namespace I2CSlave {

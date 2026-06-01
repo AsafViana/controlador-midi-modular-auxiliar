@@ -128,6 +128,8 @@ static AnalogState analogStates[MAX_CONTROLES];
 
 // --- Hardware-dependent functions ---
 
+static volatile bool hasChange = false;
+
 void init() {
   // Initialize buffer to zeros
   for (uint8_t i = 0; i < MAX_CONTROLES; i++) {
@@ -163,6 +165,13 @@ void init() {
       break;
     }
   }
+
+  // Configura pino de interrupção como open-drain para wire-OR
+  // Idle = HIGH-Z (pull-up externo no Master mantém HIGH)
+  // Ativo = LOW (sinaliza dados novos)
+  pinMode(PIN_INT_OUT, OUTPUT_OPEN_DRAIN);
+  digitalWrite(PIN_INT_OUT, HIGH); // HIGH = high-impedance (release)
+  hasChange = false;
 }
 
 void update() {
@@ -222,6 +231,7 @@ void update() {
       if (applyDeadzone(midiValue, analogStates[i].lastValue, cfg.deadzone)) {
         analogStates[i].lastValue = midiValue;
         valueBuffer[i] = invertido ? invertValue(midiValue) : midiValue;
+        hasChange = true;
       }
       break;
     }
@@ -244,6 +254,7 @@ void update() {
         // pressed = 127, not pressed = 0; invert if invertido
         uint8_t val = newStable ? MIDI_MAX : 0;
         valueBuffer[i] = invertido ? invertValue(val) : val;
+        hasChange = true;
       }
       break;
     }
@@ -263,6 +274,7 @@ void update() {
         encoderStates[i].value = newValue;
         encoderStates[i].lastTransitionMs = nowMs;
         valueBuffer[i] = invertido ? invertValue(newValue) : newValue;
+        hasChange = true;
       }
 
       // Push-button integrado do encoder (ocupa slot extra no buffer)
@@ -292,12 +304,19 @@ void update() {
             buttonStates[swIdx].stableState = newStable;
             uint8_t val = newStable ? MIDI_MAX : 0;
             valueBuffer[swIdx] = invertido ? invertValue(val) : val;
+            hasChange = true;
           }
         }
       }
       break;
     }
     }
+  }
+
+  // Se houve qualquer mudança, puxa INT_OUT para LOW para sinalizar o Master
+  if (hasChange) {
+    digitalWrite(PIN_INT_OUT, LOW);
+    // O pino será restaurado para HIGH quando o Master ler os valores (clearSignal)
   }
 }
 
@@ -311,5 +330,17 @@ uint8_t getValue(uint8_t index) {
 }
 
 uint8_t getNumControles() { return HardwareMap::TOTAL_SLOTS; }
+
+void signalChange() {
+  hasChange = true;
+  digitalWrite(PIN_INT_OUT, LOW); // Assert: puxa linha para LOW
+}
+
+void clearSignal() {
+  hasChange = false;
+  digitalWrite(PIN_INT_OUT, HIGH); // Release: high-impedance (open-drain)
+  // Pull-up externo no Master restaura a linha para HIGH.
+  // Outros módulos podem continuar assertando se tiverem dados pendentes.
+}
 
 } // namespace ControlReader

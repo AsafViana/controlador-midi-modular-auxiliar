@@ -17,6 +17,11 @@ constexpr const char *MODULE_NAME = "EXT-01";
 constexpr uint8_t PIN_SDA = 8;
 constexpr uint8_t PIN_SCL = 9;
 
+// Pino de interrupção para sinalizar mudanças ao Master (open-drain)
+// LOW = há dados novos; HIGH-Z = idle (pull-up externo no Master)
+// Open-drain permite wire-OR: múltiplos módulos no mesmo fio
+constexpr uint8_t PIN_INT_OUT = 10;
+
 // Parâmetros de leitura
 constexpr uint8_t DEADZONE =
     2; // Tolerância para leituras analógicas (em unidades MIDI 0-127)

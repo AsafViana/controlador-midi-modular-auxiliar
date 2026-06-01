@@ -25,4 +25,8 @@ uint8_t processEncoderTransition(uint8_t lastAB, uint8_t currentAB,
 uint8_t processEncoderWithAccel(uint8_t lastAB, uint8_t currentAB,
                                 uint8_t currentValue, uint32_t elapsedMs);
 uint16_t applyEma(uint16_t currentFiltered, uint16_t newRaw, uint8_t alpha);
+
+// Sinalização de mudança para o Master via GPIO interrupt
+void signalChange();  // Puxa PIN_INT_OUT para LOW (dados novos)
+void clearSignal();   // Restaura PIN_INT_OUT para HIGH (idle)
 } // namespace ControlReader

@@ -76,7 +76,6 @@ pio run -t upload
 | 5    | ✅ | ✅ | ADC + Digital |
 | 6    | ❌ | ✅ | Digital apenas |
 | 7    | ❌ | ✅ | Digital apenas |
-| 10   | ❌ | ✅ | Digital apenas |
 | 18   | ❌ | ✅ | Digital apenas |
 | 19   | ❌ | ✅ | Digital apenas |
 | 20   | ❌ | ✅ | Digital apenas |
@@ -88,6 +87,7 @@ pio run -t upload
 |:----:|:-------|
 | 8    | 🔒 I2C SDA (comunicação com módulo principal) |
 | 9    | 🔒 I2C SCL (comunicação com módulo principal) |
+| 10   | 🔒 INT (sinal de interrupt para o módulo principal — wire-OR open-drain) |
 
 ---
 
@@ -191,6 +191,41 @@ pio run -t upload
 ```
 
 > **Cabo > 30cm?** Adicione resistores de **4.7kΩ** entre SDA↔3.3V e SCL↔3.3V.
+
+### Sinal de Interrupt (GPIO 10 → Módulo Principal)
+
+O módulo auxiliar sinaliza **ativamente** quando um controle muda, sem esperar polling do mestre.
+
+```
+    ESP32-C3                Módulo Principal
+    ┌──────────┐            ┌──────────────┐
+    │ GPIO 8   ├────SDA─────┤ SDA          │
+    │ GPIO 9   ├────SCL─────┤ SCL          │
+    │ GPIO 10  ├────INT─────┤ GPIO 6 (INT) │  ← NOVO
+    │ GND      ├────GND─────┤ GND          │
+    │ 3.3V     ├────VCC─────┤ 3.3V         │
+    └──────────┘            └──────────────┘
+```
+
+**Como funciona:**
+
+1. Controle muda (pot/botão/encoder) → GPIO 10 vai para **LOW**
+2. Módulo principal detecta a borda de descida → lê valores via I2C
+3. Após leitura, GPIO 10 volta para **HIGH** (idle)
+
+**Wire-OR (múltiplos módulos):**
+
+O pino INT usa saída **open-drain** — múltiplos módulos podem compartilhar o mesmo fio:
+
+```
+    Módulo #1 GPIO 10 ──┐
+    Módulo #2 GPIO 10 ──┼──── Principal GPIO 6 (INPUT_PULLUP)
+    Módulo #3 GPIO 10 ──┘
+```
+
+Qualquer módulo que tiver dados novos puxa a linha para LOW. O pull-up do mestre mantém HIGH quando nenhum módulo está sinalizando.
+
+> **Cabo > 30cm?** Adicione pull-up externo de **4.7–10kΩ** na linha INT do lado do mestre.
 
 ---
 

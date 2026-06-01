@@ -51,7 +51,6 @@ Nem todos os pinos servem para tudo. Aqui está o resumo:
 | 0–5 | Digital (também podem ser usados como ADC) |
 | 6 | Digital apenas |
 | 7 | Digital apenas |
-| 10 | Digital apenas |
 | 18 | Digital apenas |
 | 19 | Digital apenas |
 | 20 | Digital apenas |
@@ -63,6 +62,7 @@ Nem todos os pinos servem para tudo. Aqui está o resumo:
 |------|--------|
 | 8 | Reservado para I2C (SDA) |
 | 9 | Reservado para I2C (SCL) |
+| 10 | Reservado para INT (sinal de interrupt para o módulo principal) |
 
 ---
 
@@ -161,6 +161,33 @@ Pull-ups internos são ativados automaticamente nos 3 pinos.
 
 - Se o cabo I2C tiver mais de 30cm, adicione resistores de **4.7kΩ** entre SDA e 3.3V, e entre SCL e 3.3V (pull-ups externos).
 - O endereço I2C padrão é **0x20**. Se usar mais de um módulo, cada um precisa de um endereço diferente (0x20 a 0x27).
+
+### Conexão do sinal de Interrupt (INT)
+
+Além dos 4 fios I2C, há um quinto fio que permite ao módulo **avisar o principal quando um controle muda** — sem esperar que o principal pergunte:
+
+```
+    ESP32-C3                Módulo Principal
+    ────────                ────────────────
+    GPIO 10 (INT) ────────── GPIO 6 (INT)
+```
+
+Conexão:
+
+1. **GPIO 10 do ESP32-C3** → fio de interrupt
+2. **Outro lado do fio** → GPIO 6 do módulo principal
+
+**Se usar múltiplos módulos**, todos os GPIO 10 vão no mesmo fio:
+
+```
+    Módulo #1 GPIO 10 ──┐
+    Módulo #2 GPIO 10 ──┼──── Principal GPIO 6
+    Módulo #3 GPIO 10 ──┘
+```
+
+Não precisa de resistor extra para cabos curtos (< 30cm). Para cabos mais longos, adicione um resistor de **4.7kΩ a 10kΩ** entre o fio INT e 3.3V, **apenas no módulo principal**.
+
+> **Resumo dos fios necessários:** GND, 3.3V, SDA (GPIO 8), SCL (GPIO 9), INT (GPIO 10) = **5 fios**.
 
 ---
 
