@@ -42,6 +42,20 @@ static volatile bool otaRestartPending = false;
 // Spinlock para proteção de acesso ao valueBuffer entre loop e ISR
 static portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
 
+// --- Operações deferidas (NVS não é ISR-safe) ---
+// Flags setadas no callback, processadas no loop principal
+
+enum class DeferredOp : uint8_t {
+  NONE = 0,
+  CAL_START = 1,
+  CAL_STOP = 2,
+  SET_CONFIG = 3
+};
+
+static volatile DeferredOp pendingOp = DeferredOp::NONE;
+static volatile uint8_t pendingCalChannel = 0;
+static volatile uint8_t pendingConfigPayload[5] = {0};
+
 // onReceive callback: store command if valid, ignore unknown commands
 static void onReceive(int numBytes) {
   if (numBytes < 1)
@@ -56,22 +70,23 @@ static void onReceive(int numBytes) {
     if (Wire.available()) {
       uint8_t channel = Wire.read();
       if (channel == 0xFF) {
-        Calibration::stopCalibration();
+        pendingOp = DeferredOp::CAL_STOP;
       } else {
-        Calibration::startCalibration(channel);
+        pendingCalChannel = channel;
+        pendingOp = DeferredOp::CAL_START;
       }
     }
   } else if (cmd == CMD_SET_CONFIG) {
     lastCommand = cmd;
     // Payload: [channel(1), deadzone(1), debounce_hi(1), debounce_lo(1),
     // invertido(1)]
-    uint8_t payload[5];
     uint8_t idx = 0;
     while (Wire.available() && idx < 5) {
-      payload[idx++] = Wire.read();
+      pendingConfigPayload[idx] = Wire.read();
+      idx++;
     }
     if (idx == 5) {
-      PersistentConfig::applyFromI2C(payload, idx);
+      pendingOp = DeferredOp::SET_CONFIG;
     }
   } else if (cmd == CMD_OTA_BEGIN) {
     lastCommand = cmd;
@@ -99,7 +114,6 @@ static void onReceive(int numBytes) {
         while (Wire.available()) {
           Wire.read();
         }
-        // Bloco maior que OTA_MAX_BLOCK_SIZE — não processar
       } else if (dataLen > 0) {
         OTAHandler::writeBlock(offset, dataBuf, dataLen);
       }
@@ -130,7 +144,7 @@ static void onRequest() {
   if (cmd == CMD_DESCRIPTOR) {
     uint8_t buffer[1 + (14 * MAX_CONTROLES)];
     const volatile uint8_t *values = ControlReader::getValues();
-    uint8_t count = HardwareMap::NUM_CONTROLES;
+    uint8_t count = HardwareMap::TOTAL_SLOTS;
 
     // Cópia atômica dos valores (minimiza janela de inconsistência)
     uint8_t valsCopy[MAX_CONTROLES];
@@ -145,7 +159,7 @@ static void onRequest() {
     Wire.write(buffer, totalSize);
   } else if (cmd == CMD_READ_VALUES) {
     const volatile uint8_t *values = ControlReader::getValues();
-    uint8_t count = HardwareMap::NUM_CONTROLES;
+    uint8_t count = HardwareMap::TOTAL_SLOTS;
 
     // Cópia atômica dos valores
     uint8_t valsCopy[MAX_CONTROLES];
@@ -182,6 +196,34 @@ static void onRequest() {
     infoBuffer[18] = (uint8_t)(mac >> 24);
 
     Wire.write(infoBuffer, sizeof(infoBuffer));
+  }
+}
+
+void processDeferredOps() {
+  DeferredOp op = pendingOp;
+  if (op == DeferredOp::NONE)
+    return;
+
+  // Captura valores antes de limpar flag (evita race condition)
+  pendingOp = DeferredOp::NONE;
+
+  switch (op) {
+  case DeferredOp::CAL_START:
+    Calibration::startCalibration(pendingCalChannel);
+    break;
+  case DeferredOp::CAL_STOP:
+    Calibration::stopCalibration();
+    break;
+  case DeferredOp::SET_CONFIG: {
+    uint8_t payload[5];
+    for (uint8_t i = 0; i < 5; i++) {
+      payload[i] = pendingConfigPayload[i];
+    }
+    PersistentConfig::applyFromI2C(payload, 5);
+    break;
+  }
+  default:
+    break;
   }
 }
 

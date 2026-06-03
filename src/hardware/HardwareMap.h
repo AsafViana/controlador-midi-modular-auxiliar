@@ -61,6 +61,10 @@ constexpr uint8_t TOTAL_SLOTS = countTotalSlots();
 static_assert(HardwareMap::NUM_CONTROLES <= MAX_CONTROLES,
               "Exceeded maximum number of controls");
 
+static_assert(HardwareMap::TOTAL_SLOTS <= MAX_CONTROLES,
+              "TOTAL_SLOTS (controls + encoder push-buttons) exceeds "
+              "MAX_CONTROLES buffer size");
+
 // --- Validação de GPIOs em tempo de compilação ---
 
 // GPIOs ADC válidos no ESP32-C3: 0, 1, 2, 3, 4, 5

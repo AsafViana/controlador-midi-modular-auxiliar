@@ -10,6 +10,11 @@
 
 static uint32_t lastActivityMs = 0;
 
+// OTA restart: aguarda transmissão I2C finalizar sem usar delay()
+static bool otaRestartPending = false;
+static uint32_t otaRestartRequestMs = 0;
+constexpr uint32_t OTA_RESTART_DELAY_MS = 100;
+
 void setup() {
   // Inicializa Watchdog Timer
   const esp_task_wdt_config_t wdtConfig = {
@@ -31,11 +36,16 @@ void setup() {
 
 void loop() {
   ControlReader::update();
+  I2CSlave::processDeferredOps();
   esp_task_wdt_reset(); // Alimenta o watchdog a cada iteração
 
-  // Verifica se OTA completou e restart está pendente
-  if (I2CSlave::isOtaRestartPending()) {
-    delay(100); // Aguarda I2C finalizar transmissão
+  // Verifica se OTA completou e restart está pendente (sem delay bloqueante)
+  if (!otaRestartPending && I2CSlave::isOtaRestartPending()) {
+    otaRestartPending = true;
+    otaRestartRequestMs = millis();
+  }
+  if (otaRestartPending &&
+      (millis() - otaRestartRequestMs) >= OTA_RESTART_DELAY_MS) {
     ESP.restart();
   }
 

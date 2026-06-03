@@ -9,6 +9,9 @@ namespace I2CSlave {
 // Inicializa Wire no modo escravo e registra callbacks
 void init();
 
+// Processa operações deferidas (calibração, config) — chamar no loop()
+void processDeferredOps();
+
 // Verifica se houve atividade I2C recente (desde última chamada)
 bool hasRecentActivity();
 

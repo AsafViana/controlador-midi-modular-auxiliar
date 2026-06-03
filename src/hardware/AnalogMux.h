@@ -22,16 +22,16 @@ constexpr uint8_t MAX_MUX = 2;
 constexpr uint8_t NUM_MUX = 0;
 
 // Configuração dos muxes (definida pelo usuário)
-// Descomentar e preencher ao usar multiplexadores, ajustar NUM_MUX acima.
+// Para ativar: definir NUM_MUX > 0 e descomentar a configuração abaixo.
 // Exemplo para CD4051 no GPIO 5, seleção 6/7/10:
-//   constexpr MuxConfig MUX_CONFIG[NUM_MUX] = {
+//   constexpr MuxConfig MUX_CONFIG[MAX_MUX] = {
 //       {5, 6, 7, 10, 0, 8},
 //   };
 
-// Inicializa GPIOs dos multiplexadores
+// Inicializa GPIOs dos multiplexadores (no-op se NUM_MUX == 0)
 void init();
 
-// Seleciona um canal do mux e lê o valor ADC
+// Seleciona um canal do mux e lê o valor ADC (retorna 0 se NUM_MUX == 0)
 uint16_t readChannel(uint8_t muxIdx, uint8_t channel);
 
 } // namespace AnalogMux

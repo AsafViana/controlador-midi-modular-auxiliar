@@ -10,8 +10,8 @@ constexpr uint8_t FW_VERSION_PATCH = 0;
 // Endereço I2C do módulo (faixa válida: 0x20-0x27)
 constexpr uint8_t I2C_ADDRESS = 0x20;
 
-// Nome do módulo
-constexpr const char *MODULE_NAME = "EXT-01";
+// Nome do módulo (max 12 caracteres — array garante compile-time data)
+constexpr char MODULE_NAME[] = "EXT-01";
 
 // Pinos I2C
 constexpr uint8_t PIN_SDA = 8;

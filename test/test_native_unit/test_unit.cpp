@@ -30,9 +30,9 @@ void test_adc_max_maps_to_midi_max() {
 }
 
 void test_adc_midpoint_maps_to_expected() {
-  // 2048 * 127 / 4095 = 63.5... → 63 (integer division truncates)
+  // Com arredondamento: (2048 * 127 + 2047) / 4095 = 64
   uint8_t mid = ControlReader::mapAdcToMidi(2048);
-  assert(mid == 63);
+  assert(mid == 64);
   printf("  PASSED: test_adc_midpoint_maps_to_expected (2048 -> %d)\n", mid);
 }
 
